@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model QuizSession {
+  id             Int          @id @default(autoincrement())
+  date           DateTime     @default(now())
+  theme          String
+  totalQuestions Int
+  correctAnswers Int
+  durationSec    Int          @default(0)
+  answers        QuizAnswer[]
+}
+
+model QuizAnswer {
+  id               Int         @id @default(autoincrement())
+  session          QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId        Int
+  notionQuestionId String
+  questionText     String
+  userAnswer       String
+  correctAnswer    String
+  isCorrect        Boolean
+  timeSpent        Int         @default(0)
+}
+
+model CompetencyScore {
+  id           Int      @id @default(autoincrement())
+  theme        String   @unique
+  score        Float    @default(0)
+  totalAnswers Int      @default(0)
+  correct      Int      @default(0)
+  lastUpdated  DateTime @default(now())
+}
+
+model AppConfig {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
