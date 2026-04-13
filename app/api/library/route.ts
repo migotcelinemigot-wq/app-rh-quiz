@@ -3,6 +3,8 @@ import { getQuestionsFromNotion } from "@/lib/notion";
 import { prisma } from "@/lib/prisma";
 import type { ThemeKey } from "@/lib/themes";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

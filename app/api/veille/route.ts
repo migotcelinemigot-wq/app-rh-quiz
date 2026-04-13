@@ -3,6 +3,7 @@ import Groq from "groq-sdk";
 import { Client } from "@notionhq/client";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });

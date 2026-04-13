@@ -4,6 +4,7 @@ import { saveQuestionsToNotion, ensureQuestionsDatabase } from "@/lib/notion";
 import { prisma } from "@/lib/prisma";
 import type { ThemeKey } from "@/lib/themes";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
