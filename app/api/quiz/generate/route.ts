@@ -4,6 +4,8 @@ import { saveQuestionsToNotion, ensureQuestionsDatabase } from "@/lib/notion";
 import { prisma } from "@/lib/prisma";
 import type { ThemeKey } from "@/lib/themes";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

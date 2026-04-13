@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { THEMES } from "@/lib/themes";
 import type { ThemeKey } from "@/lib/themes";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const { theme } = (await req.json()) as { theme: ThemeKey };

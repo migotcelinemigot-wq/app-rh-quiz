@@ -3,6 +3,8 @@ import Groq from "groq-sdk";
 import { Client } from "@notionhq/client";
 import { prisma } from "@/lib/prisma";
 
+export const maxDuration = 60;
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 

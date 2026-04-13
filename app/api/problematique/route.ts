@@ -3,6 +3,8 @@ import Groq from "groq-sdk";
 import { THEMES, THEME_CONTEXT } from "@/lib/themes";
 import type { ThemeKey } from "@/lib/themes";
 
+export const maxDuration = 60;
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
