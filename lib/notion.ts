@@ -79,29 +79,35 @@ export async function saveQuestionsToNotion(
   questions: Omit<NotionQuestion, "id" | "createdAt">[],
   dbId: string
 ): Promise<NotionQuestion[]> {
-  // Sauvegarder toutes les questions en parallèle
-  const results = await Promise.all(
-    questions.map(async (q) => {
-      const difficultyLabel =
-        q.difficulty === 1 ? "Facile" : q.difficulty === 3 ? "Difficile" : "Moyen";
+  const results: NotionQuestion[] = [];
 
-      const page = await notion.pages.create({
-        parent: { database_id: dbId },
-        properties: {
-          Question: { title: [{ text: { content: q.question } }] },
-          Thème: { select: { name: q.theme } },
-          Options: { rich_text: [{ text: { content: JSON.stringify(q.options) } }] },
-          Réponse: { select: { name: q.answer } },
-          Explication: { rich_text: [{ text: { content: q.explanation } }] },
-          Source: { rich_text: [{ text: { content: q.source || "" } }] },
-          Difficulté: { select: { name: difficultyLabel } },
-          "Créé le": { date: { start: new Date().toISOString() } },
-        },
-      });
+  // Sauvegarder par lots de 3 pour respecter la limite Notion (3 req/sec)
+  for (let i = 0; i < questions.length; i += 3) {
+    const batch = questions.slice(i, i + 3);
+    const batchResults = await Promise.all(
+      batch.map(async (q) => {
+        const difficultyLabel =
+          q.difficulty === 1 ? "Facile" : q.difficulty === 3 ? "Difficile" : "Moyen";
 
-      return { ...q, id: page.id, createdAt: new Date().toISOString() } as NotionQuestion;
-    })
-  );
+        const page = await notion.pages.create({
+          parent: { database_id: dbId },
+          properties: {
+            Question: { title: [{ text: { content: q.question } }] },
+            Thème: { select: { name: q.theme } },
+            Options: { rich_text: [{ text: { content: JSON.stringify(q.options) } }] },
+            Réponse: { select: { name: q.answer } },
+            Explication: { rich_text: [{ text: { content: q.explanation } }] },
+            Source: { rich_text: [{ text: { content: q.source || "" } }] },
+            Difficulté: { select: { name: difficultyLabel } },
+            "Créé le": { date: { start: new Date().toISOString() } },
+          },
+        });
+
+        return { ...q, id: page.id, createdAt: new Date().toISOString() } as NotionQuestion;
+      })
+    );
+    results.push(...batchResults);
+  }
 
   return results;
 }

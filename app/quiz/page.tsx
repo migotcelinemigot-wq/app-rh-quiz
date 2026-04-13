@@ -10,7 +10,7 @@ export default function QuizSetup() {
   const router = useRouter();
   const [theme, setTheme] = useState<string>("");
   const [difficulty, setDifficulty] = useState<number>(2);
-  const [count, setCount] = useState<number>(10);
+  const [count, setCount] = useState<number>(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
