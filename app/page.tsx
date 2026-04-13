@@ -21,15 +21,15 @@ async function getDashboardData() {
   if (recentSessions.length > 0) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const sessionDays = [
-      ...new Set(
+    const sessionDays = Array.from(
+      new Set(
         recentSessions.map((s) => {
           const d = new Date(s.date);
           d.setHours(0, 0, 0, 0);
           return d.getTime();
         })
-      ),
-    ].sort((a, b) => b - a);
+      )
+    ).sort((a, b) => b - a);
 
     let current = today.getTime();
     for (const day of sessionDays) {
