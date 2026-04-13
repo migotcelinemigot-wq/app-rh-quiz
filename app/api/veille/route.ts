@@ -39,37 +39,24 @@ export async function GET() {
     });
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "llama3-8b-8192",
       messages: [
         {
           role: "system",
-          content: `Tu es un expert en veille juridique RH, spécialisé dans le droit du travail français et la convention collective 0086 (Publicité).
-Tu génères des actualités RH réalistes et pédagogiques pour aider un professionnel RH à se tenir informé.
-Tu réponds UNIQUEMENT en JSON valide.`,
+          content: `Tu es expert RH français, CC 0086. Réponds UNIQUEMENT en JSON valide, sans texte avant ou après.`,
         },
         {
           role: "user",
-          content: `Génère 6 actualités RH importantes pour la semaine du ${today}.
-Couvre : droit du travail, paie, jurisprudence, convention collective 0086, URSSAF, retraite, congés, délais légaux.
-Varie les niveaux d'urgence.
+          content: `Génère 4 actualités RH pour le ${today}. Thèmes : droit travail, paie, CC 0086, URSSAF.
 
-Réponds avec un tableau JSON (rien d'autre) :
-[
-  {
-    "id": "1",
-    "titre": "Titre court et accrocheur",
-    "resume": "Résumé clair en 2-3 phrases de l'actualité",
-    "impact": "Ce que ça change concrètement pour vous en tant que RH",
-    "source": "URSSAF / Code du travail Art. L... / CC 0086 Art. ...",
-    "theme": "Paie & rémunération",
-    "urgence": "haute"
-  }
-]
-Les urgences possibles : "haute" (action requise rapidement), "moyenne" (à traiter ce mois), "info" (information utile).`,
+JSON uniquement :
+[{"id":"1","titre":"...","resume":"2 phrases max","impact":"1 phrase","source":"Art. L... / CC 0086","theme":"Paie","urgence":"haute"}]
+
+Urgences : "haute", "moyenne", "info".`,
         },
       ],
       temperature: 0.7,
-      max_tokens: 3000,
+      max_tokens: 1200,
     });
 
     const text = completion.choices[0]?.message?.content?.trim() ?? "";
