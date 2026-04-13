@@ -47,16 +47,16 @@ export async function GET() {
         },
         {
           role: "user",
-          content: `Génère 4 actualités RH pour le ${today}. Thèmes : droit travail, paie, CC 0086, URSSAF.
+          content: `Génère 6 actualités RH pour le ${today}. Thèmes variés : droit travail, paie, CC 0086, URSSAF, retraite, congés.
 
 JSON uniquement :
-[{"id":"1","titre":"...","resume":"2 phrases max","impact":"1 phrase","source":"Art. L... / CC 0086","theme":"Paie","urgence":"haute"}]
+[{"id":"1","titre":"Titre accrocheur","resume":"2-3 phrases","impact":"1 phrase concrète","source":"Art. L... / CC 0086","theme":"Paie","urgence":"haute"}]
 
 Urgences : "haute", "moyenne", "info".`,
         },
       ],
       temperature: 0.7,
-      max_tokens: 1200,
+      max_tokens: 2000,
     });
 
     const text = completion.choices[0]?.message?.content?.trim() ?? "";
