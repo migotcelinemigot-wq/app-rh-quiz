@@ -79,34 +79,31 @@ export async function saveQuestionsToNotion(
   questions: Omit<NotionQuestion, "id" | "createdAt">[],
   dbId: string
 ): Promise<NotionQuestion[]> {
-  const saved: NotionQuestion[] = [];
+  // Sauvegarder toutes les questions en parallèle
+  const results = await Promise.all(
+    questions.map(async (q) => {
+      const difficultyLabel =
+        q.difficulty === 1 ? "Facile" : q.difficulty === 3 ? "Difficile" : "Moyen";
 
-  for (const q of questions) {
-    const difficultyLabel =
-      q.difficulty === 1 ? "Facile" : q.difficulty === 3 ? "Difficile" : "Moyen";
+      const page = await notion.pages.create({
+        parent: { database_id: dbId },
+        properties: {
+          Question: { title: [{ text: { content: q.question } }] },
+          Thème: { select: { name: q.theme } },
+          Options: { rich_text: [{ text: { content: JSON.stringify(q.options) } }] },
+          Réponse: { select: { name: q.answer } },
+          Explication: { rich_text: [{ text: { content: q.explanation } }] },
+          Source: { rich_text: [{ text: { content: q.source || "" } }] },
+          Difficulté: { select: { name: difficultyLabel } },
+          "Créé le": { date: { start: new Date().toISOString() } },
+        },
+      });
 
-    const page = await notion.pages.create({
-      parent: { database_id: dbId },
-      properties: {
-        Question: { title: [{ text: { content: q.question } }] },
-        Thème: { select: { name: q.theme } },
-        Options: { rich_text: [{ text: { content: JSON.stringify(q.options) } }] },
-        Réponse: { select: { name: q.answer } },
-        Explication: { rich_text: [{ text: { content: q.explanation } }] },
-        Source: { rich_text: [{ text: { content: q.source || "" } }] },
-        Difficulté: { select: { name: difficultyLabel } },
-        "Créé le": { date: { start: new Date().toISOString() } },
-      },
-    });
+      return { ...q, id: page.id, createdAt: new Date().toISOString() } as NotionQuestion;
+    })
+  );
 
-    saved.push({
-      ...q,
-      id: page.id,
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  return saved;
+  return results;
 }
 
 // ─── Lire des questions depuis Notion ────────────────────────────────────────

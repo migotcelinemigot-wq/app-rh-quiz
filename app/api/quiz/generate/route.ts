@@ -25,8 +25,12 @@ export async function POST(req: NextRequest) {
     // Récupérer ou créer la base de données Notion
     let dbId = process.env.NOTION_QUESTIONS_DB_ID;
     if (!dbId) {
+      // Chercher dans AppConfig (persisté entre les appels)
+      const config = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
+      dbId = config?.value;
+    }
+    if (!dbId) {
       dbId = await ensureQuestionsDatabase();
-      // Sauvegarder l'ID en base pour future utilisation
       await prisma.appConfig.upsert({
         where: { key: "NOTION_QUESTIONS_DB_ID" },
         update: { value: dbId },
