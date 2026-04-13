@@ -75,34 +75,28 @@ export async function generateQuestions(
     .join("\n\n");
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "llama3-8b-8192",
     messages: [
       {
         role: "system",
-        content: `Tu es un expert en droit du travail français et en ressources humaines, spécialisé dans la convention collective 0086 (Publicité).
-Tu génères des questions de formation variées et pédagogiques pour un professionnel RH.
-Tu réponds UNIQUEMENT en JSON valide, sans aucun texte avant ou après.`,
+        content: `Expert droit du travail français et CC 0086 (Publicité). Génère des questions RH. JSON uniquement, sans texte avant ou après.`,
       },
       {
         role: "user",
-        content: `Génère exactement ${count} question(s) de niveau ${difficultyLabel} sur : ${themeLabel}.
+        content: `Génère exactement ${count} question(s) niveau ${difficultyLabel} sur : ${themeLabel}.
 
 Contexte : ${themeContext}
 
-Répartition des types à respecter :
+Types requis :
 ${typeInstructions}
 
-Règles :
-- Les questions doivent être variées et ne pas se répéter
-- Les explications doivent être pédagogiques (minimum 2 phrases)
-- Citer les articles de loi ou de la CC 0086 quand c'est possible
-- Les mises en situation doivent être réalistes et ancrées dans le quotidien RH
+Règles : questions variées, explications courtes (1-2 phrases), citer articles loi/CC 0086.
 
-Réponds avec un tableau JSON contenant exactement ${count} objets (rien d'autre).`,
+Tableau JSON de ${count} objets uniquement.`,
       },
     ],
     temperature: 0.8,
-    max_tokens: 6000,
+    max_tokens: 4000,
   });
 
   const text = completion.choices[0]?.message?.content?.trim() ?? "";
