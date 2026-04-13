@@ -75,7 +75,7 @@ export async function generateQuestions(
     .join("\n\n");
 
   const completion = await groq.chat.completions.create({
-    model: "llama3-8b-8192",
+    model: "llama-3.1-8b-instant",
     messages: [
       {
         role: "system",
