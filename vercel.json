@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/telegram?type=morning",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/telegram?type=evening",
+      "schedule": "0 17 * * *"
+    }
+  ]
+}
