@@ -65,57 +65,97 @@ async function saveToNotionBackground(
   try {
     const questionsToSave = generated.map((q) => ({ ...q, theme: theme as ThemeKey, difficulty }));
 
-    // ── 1. Sauvegarder dans la page thème (structure wiki lisible) ──────────
     const themeKey   = theme as string;
     const themeLabel = theme === "TOUS"
       ? "Tous les thèmes"
       : (THEMES[theme as ThemeKey]?.label ?? theme);
     const cacheKey   = `NOTION_THEME_PAGE_${themeKey}`;
 
-    // Chercher l'ID dans AppConfig (peuplé par /api/notion/setup)
-    let themePageId: string | undefined;
-    const stored = await prisma.appConfig.findUnique({ where: { key: cacheKey } });
-    themePageId = stored?.value ?? undefined;
+    console.log("[notion-bg] Start — theme:", themeKey, "| cacheKey:", cacheKey);
 
-    // Si pas en AppConfig, créer la page (nécessite NOTION_PARENT_PAGE_ID)
+    // ── 1. Sauvegarder dans la page thème ──────────────────────────────────────
+    let themePageId: string | undefined;
+
+    // Chercher l'ID dans AppConfig (peuplé par /api/notion/setup)
+    try {
+      const stored = await prisma.appConfig.findUnique({ where: { key: cacheKey } });
+      themePageId = stored?.value ?? undefined;
+      console.log("[notion-bg] AppConfig lookup →", themePageId ? `found: ${themePageId}` : "NOT FOUND");
+    } catch (dbErr) {
+      console.error("[notion-bg] AppConfig DB error:", dbErr);
+    }
+
+    // Si pas en AppConfig, tenter de créer la page (nécessite NOTION_PARENT_PAGE_ID)
     if (!themePageId) {
       const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
+      console.log("[notion-bg] NOTION_PARENT_PAGE_ID:", parentPageId ? "SET" : "NOT SET");
       if (parentPageId) {
-        themePageId = await ensureThemePage(parentPageId, themeKey, themeLabel);
-        await prisma.appConfig.upsert({
-          where:  { key: cacheKey },
-          update: { value: themePageId },
-          create: { key: cacheKey, value: themePageId },
-        });
-        console.log("[quiz/generate] Created theme page for:", themeLabel);
+        try {
+          themePageId = await ensureThemePage(parentPageId, themeKey, themeLabel);
+          await prisma.appConfig.upsert({
+            where:  { key: cacheKey },
+            update: { value: themePageId },
+            create: { key: cacheKey, value: themePageId },
+          });
+          console.log("[notion-bg] Created theme page:", themePageId);
+        } catch (createErr) {
+          console.error("[notion-bg] Failed to create theme page:", createErr);
+        }
       } else {
-        console.warn("[quiz/generate] Notion theme page not found and NOTION_PARENT_PAGE_ID not set — skipping page save");
+        console.warn("[notion-bg] Cannot create theme page — NOTION_PARENT_PAGE_ID not set");
       }
     }
 
     if (themePageId) {
-      await appendQuestionsToThemePage(themePageId, questionsToSave);
-      console.log("[quiz/generate] Questions appended to theme page:", themeLabel);
+      console.log("[notion-bg] Appending", questionsToSave.length, "questions to page:", themePageId);
+      try {
+        await appendQuestionsToThemePage(themePageId, questionsToSave);
+        console.log("[notion-bg] ✅ Theme page append OK");
+      } catch (appendErr) {
+        console.error("[notion-bg] appendQuestionsToThemePage error:", appendErr);
+      }
+    } else {
+      console.warn("[notion-bg] No theme page ID — skipping page append");
     }
 
-    // ── 2. Sauvegarder dans la base de données (pour la bibliothèque app) ──
+    // ── 2. Sauvegarder dans la base de données ──────────────────────────────────
     let dbId = process.env.NOTION_QUESTIONS_DB_ID;
+    console.log("[notion-bg] NOTION_QUESTIONS_DB_ID env:", dbId ? "SET" : "NOT SET");
+
     if (!dbId) {
-      const config = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
-      dbId = config?.value;
+      try {
+        const config = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
+        dbId = config?.value;
+        console.log("[notion-bg] DB ID from AppConfig:", dbId ? dbId : "NOT FOUND");
+      } catch (dbErr) {
+        console.error("[notion-bg] AppConfig DB ID lookup error:", dbErr);
+      }
     }
+
     if (!dbId) {
-      dbId = await ensureQuestionsDatabase();
-      await prisma.appConfig.upsert({
-        where:  { key: "NOTION_QUESTIONS_DB_ID" },
-        update: { value: dbId },
-        create: { key: "NOTION_QUESTIONS_DB_ID", value: dbId },
-      });
+      console.log("[notion-bg] Creating new questions database...");
+      try {
+        dbId = await ensureQuestionsDatabase();
+        await prisma.appConfig.upsert({
+          where:  { key: "NOTION_QUESTIONS_DB_ID" },
+          update: { value: dbId },
+          create: { key: "NOTION_QUESTIONS_DB_ID", value: dbId },
+        });
+        console.log("[notion-bg] Created DB:", dbId);
+      } catch (createDbErr) {
+        console.error("[notion-bg] ensureQuestionsDatabase error:", createDbErr);
+        return;
+      }
     }
-    await saveQuestionsToNotion(questionsToSave, dbId);
-    console.log("[quiz/generate] Notion DB save complete");
+
+    try {
+      await saveQuestionsToNotion(questionsToSave, dbId);
+      console.log("[notion-bg] ✅ DB save OK");
+    } catch (saveErr) {
+      console.error("[notion-bg] saveQuestionsToNotion error:", saveErr);
+    }
 
   } catch (err) {
-    console.error("[quiz/generate] Notion background save error:", err);
+    console.error("[notion-bg] Unexpected error:", err);
   }
 }
