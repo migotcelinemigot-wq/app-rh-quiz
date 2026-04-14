@@ -120,7 +120,7 @@ export async function generateQuestions(
   // Adapter max_tokens selon le nombre de questions (150 tokens/question en moyenne)
   const dynamicMaxTokens = Math.min(2000 + count * 180, 12000);
 
-  const models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
+  const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
   const messages: Parameters<typeof groq.chat.completions.create>[0]["messages"] = [
     {
       role: "system",
@@ -156,10 +156,26 @@ Réponds avec : {"questions": [ /* exactement ${count} objets */ ]}`,
       });
 
       const text = completion.choices[0]?.message?.content?.trim() ?? "";
-      const parsed = JSON.parse(text);
-      const questions: GeneratedQuestion[] = parsed.questions ?? parsed;
-      if (!Array.isArray(questions)) throw new Error("Format JSON invalide");
-      console.log("[claude] Success with model:", model);
+      if (!text) throw new Error("Réponse vide du modèle");
+
+      // Extraire le JSON même si le modèle ajoute du texte autour
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Aucun JSON trouvé dans la réponse");
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Chercher le tableau de questions sous différentes clés possibles
+      const questions: GeneratedQuestion[] =
+        parsed.questions ??
+        parsed.Questions ??
+        parsed.quiz ??
+        (Array.isArray(parsed) ? parsed : null);
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error(`Format JSON invalide — clés trouvées: ${Object.keys(parsed).join(", ")}`);
+      }
+
+      console.log("[claude] Success with model:", model, "— questions:", questions.length);
       return questions.slice(0, count);
     } catch (err) {
       console.warn("[claude] Model failed:", model, err instanceof Error ? err.message : err);

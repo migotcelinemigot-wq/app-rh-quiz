@@ -16,7 +16,7 @@ export async function GET() {
     apiKeyPrefix: apiKey.slice(0, 8) + "...",
   };
 
-  for (const model of ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]) {
+  for (const model of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
     try {
       const completion = await groq.chat.completions.create({
         model,
