@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { theme, difficulty = 2, count = 10 } = body as {
+    const { theme, difficulty = 2, count = 5 } = body as {
       theme: ThemeKey;
       difficulty: 1 | 2 | 3;
       count: number;
@@ -20,18 +20,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Thème requis" }, { status: 400 });
     }
 
-    console.log("[quiz/generate] 1. Generating", count, "questions, theme:", theme);
+    // 1. Générer les questions via Groq (priorité absolue)
+    console.log("[quiz/generate] Generating", count, "questions, theme:", theme);
     const generated = await generateQuestions(theme, difficulty, count);
-    console.log("[quiz/generate] 2. Questions generated:", generated.length);
+    console.log("[quiz/generate] Generated:", generated.length);
 
-    // Récupérer ou créer la base de données Notion
+    // Préparer les questions avec IDs temporaires pour le quiz
+    const questionsWithTempIds = generated.map((q, i) => ({
+      ...q,
+      theme,
+      difficulty,
+      id: `temp_${Date.now()}_${i}`,
+      createdAt: new Date().toISOString(),
+    }));
+
+    // 2. Sauvegarder dans Notion en arrière-plan (non bloquant)
+    // Si Notion échoue, le quiz continue quand même
+    saveToNotionBackground(generated, theme, difficulty).catch((err) =>
+      console.error("[quiz/generate] Notion save failed (non-blocking):", err)
+    );
+
+    return NextResponse.json({ questions: questionsWithTempIds, count: questionsWithTempIds.length });
+
+  } catch (error) {
+    console.error("[quiz/generate] Error:", error);
+    return NextResponse.json(
+      { error: "Erreur lors de la génération des questions" },
+      { status: 500 }
+    );
+  }
+}
+
+async function saveToNotionBackground(
+  generated: Awaited<ReturnType<typeof generateQuestions>>,
+  theme: ThemeKey,
+  difficulty: number
+) {
+  try {
     let dbId = process.env.NOTION_QUESTIONS_DB_ID;
     if (!dbId) {
       const config = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
       dbId = config?.value;
     }
     if (!dbId) {
-      console.log("[quiz/generate] 3. Creating Notion DB...");
       dbId = await ensureQuestionsDatabase();
       await prisma.appConfig.upsert({
         where: { key: "NOTION_QUESTIONS_DB_ID" },
@@ -39,20 +70,12 @@ export async function POST(req: NextRequest) {
         create: { key: "NOTION_QUESTIONS_DB_ID", value: dbId },
       });
     }
-    console.log("[quiz/generate] 4. Notion DB ready:", dbId);
-
-    const saved = await saveQuestionsToNotion(
+    await saveQuestionsToNotion(
       generated.map((q) => ({ ...q, theme, difficulty })),
       dbId
     );
-    console.log("[quiz/generate] 5. Saved to Notion:", saved.length);
-
-    return NextResponse.json({ questions: saved, count: saved.length });
-  } catch (error) {
-    console.error("Erreur génération quiz:", error);
-    return NextResponse.json(
-      { error: "Erreur lors de la génération des questions" },
-      { status: 500 }
-    );
+    console.log("[quiz/generate] Notion save complete");
+  } catch (err) {
+    console.error("[quiz/generate] Notion background save error:", err);
   }
 }
