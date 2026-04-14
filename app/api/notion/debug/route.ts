@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { appendQuestionsToThemePage } from "@/lib/notion";
+import { appendQuestionsToThemePage, saveQuestionsToNotion } from "@/lib/notion";
 import type { ThemeKey } from "@/lib/themes";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +50,7 @@ export async function GET() {
     // ignore
   }
 
+  // 3a. Test append page thème
   if (testPageId) {
     try {
       await appendQuestionsToThemePage(testPageId, [{
@@ -59,15 +60,45 @@ export async function GET() {
         question:    "🧪 Question de test — Debug endpoint",
         options:     ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
         answer:      "A",
-        explanation: "📌 Définition : Ceci est une question de test envoyée depuis /api/notion/debug pour vérifier que l'intégration Notion fonctionne correctement.",
+        explanation: "📌 Définition : Test de l'intégration Notion depuis /api/notion/debug.",
         source:      "Debug endpoint — /api/notion/debug",
       }]);
-      result.notionAppend = `✅ SUCCESS — question de test ajoutée à la page thème: ${testTheme} (${testPageId})`;
+      result.notionPageAppend = `✅ SUCCESS — page thème: ${testTheme} (${testPageId})`;
     } catch (err) {
-      result.notionAppend = `❌ FAILED — ${err instanceof Error ? err.message : String(err)}`;
+      result.notionPageAppend = `❌ FAILED — ${err instanceof Error ? err.message : String(err)}`;
     }
   } else {
-    result.notionAppend = "⚠️ Aucune page thème trouvée en AppConfig — lance d'abord /api/notion/setup";
+    result.notionPageAppend = "⚠️ Aucune page thème en AppConfig — lance /api/notion/setup";
+  }
+
+  // 3b. Test save DB Notion (bibliothèque)
+  let dbId: string | undefined;
+  try {
+    const cfg = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
+    dbId = cfg?.value ?? process.env.NOTION_QUESTIONS_DB_ID;
+    result.dbIdFound = dbId ?? "NOT FOUND";
+  } catch (err) {
+    result.dbIdFound = `DB ERROR: ${err instanceof Error ? err.message : String(err)}`;
+  }
+
+  if (dbId) {
+    try {
+      await saveQuestionsToNotion([{
+        theme:       (testTheme ?? "DROIT_TRAVAIL") as ThemeKey,
+        difficulty:  2,
+        type:        "QCM",
+        question:    "🧪 Question de test DB — Debug endpoint",
+        options:     ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
+        answer:      "A",
+        explanation: "📌 Définition : Test save DB depuis /api/notion/debug.",
+        source:      "Debug endpoint — /api/notion/debug",
+      }], dbId);
+      result.notionDbSave = `✅ SUCCESS — sauvegardé dans DB (${dbId})`;
+    } catch (err) {
+      result.notionDbSave = `❌ FAILED — ${err instanceof Error ? err.message : String(err)}`;
+    }
+  } else {
+    result.notionDbSave = "⚠️ Aucun DB ID trouvé";
   }
 
   return NextResponse.json(result, { status: 200 });

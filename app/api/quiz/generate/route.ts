@@ -109,34 +109,18 @@ async function saveToNotionBackground(
       }
     }
 
-    if (themePageId) {
-      console.log("[notion-bg] Appending", questionsToSave.length, "questions to page:", themePageId);
-      try {
-        await appendQuestionsToThemePage(themePageId, questionsToSave);
-        console.log("[notion-bg] ✅ Theme page append OK");
-      } catch (appendErr) {
-        console.error("[notion-bg] appendQuestionsToThemePage error:", appendErr);
-      }
-    } else {
-      console.warn("[notion-bg] No theme page ID — skipping page append");
-    }
-
-    // ── 2. Sauvegarder dans la base de données ──────────────────────────────────
+    // ── 2. Récupérer l'ID de la base de données ──────────────────────────────────
     let dbId = process.env.NOTION_QUESTIONS_DB_ID;
-    console.log("[notion-bg] NOTION_QUESTIONS_DB_ID env:", dbId ? "SET" : "NOT SET");
-
     if (!dbId) {
       try {
         const config = await prisma.appConfig.findUnique({ where: { key: "NOTION_QUESTIONS_DB_ID" } });
         dbId = config?.value;
-        console.log("[notion-bg] DB ID from AppConfig:", dbId ? dbId : "NOT FOUND");
+        console.log("[notion-bg] DB ID from AppConfig:", dbId ?? "NOT FOUND");
       } catch (dbErr) {
         console.error("[notion-bg] AppConfig DB ID lookup error:", dbErr);
       }
     }
-
     if (!dbId) {
-      console.log("[notion-bg] Creating new questions database...");
       try {
         dbId = await ensureQuestionsDatabase();
         await prisma.appConfig.upsert({
@@ -144,19 +128,37 @@ async function saveToNotionBackground(
           update: { value: dbId },
           create: { key: "NOTION_QUESTIONS_DB_ID", value: dbId },
         });
-        console.log("[notion-bg] Created DB:", dbId);
+        console.log("[notion-bg] Created new DB:", dbId);
       } catch (createDbErr) {
         console.error("[notion-bg] ensureQuestionsDatabase error:", createDbErr);
-        return;
       }
     }
 
-    try {
-      await saveQuestionsToNotion(questionsToSave, dbId);
-      console.log("[notion-bg] ✅ DB save OK");
-    } catch (saveErr) {
-      console.error("[notion-bg] saveQuestionsToNotion error:", saveErr);
+    // ── 3. Lancer page thème + DB en parallèle ──────────────────────────────────
+    const saves: Promise<void>[] = [];
+
+    if (themePageId) {
+      saves.push(
+        appendQuestionsToThemePage(themePageId, questionsToSave)
+          .then(() => console.log("[notion-bg] ✅ Theme page append OK"))
+          .catch((err) => console.error("[notion-bg] appendQuestionsToThemePage error:", err))
+      );
+    } else {
+      console.warn("[notion-bg] No theme page ID — skipping page append");
     }
+
+    if (dbId) {
+      saves.push(
+        saveQuestionsToNotion(questionsToSave, dbId)
+          .then(() => console.log("[notion-bg] ✅ DB save OK"))
+          .catch((err) => console.error("[notion-bg] saveQuestionsToNotion error:", err))
+      );
+    } else {
+      console.warn("[notion-bg] No DB ID — skipping DB save");
+    }
+
+    await Promise.all(saves);
+    console.log("[notion-bg] ✅ All saves complete");
 
   } catch (err) {
     console.error("[notion-bg] Unexpected error:", err);
