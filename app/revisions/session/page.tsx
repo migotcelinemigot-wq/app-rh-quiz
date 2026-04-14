@@ -195,6 +195,7 @@ export default function RevisionSession() {
       ) : (
         // Mode flashcard pour les anciennes questions sans options
         <FlashCard
+          key={q.id}
           question={q}
           questionNumber={current + 1}
           totalQuestions={questions.length}
@@ -232,6 +233,11 @@ function FlashCard({
     onAnswer(isCorrect ? question.correctAnswer : "—", isCorrect);
   };
 
+  // Essayer de retrouver le texte de la bonne réponse depuis la lettre
+  // (quand les options ne sont pas stockées, correctAnswer est juste "A"/"B"/...)
+  const correctLetter = question.correctAnswer;
+  const correctText = correctLetter; // on affiche la lettre — les nouvelles sessions auront les options
+
   return (
     <div className="bg-white rounded-xl border border-border p-6">
       {/* Question */}
@@ -240,6 +246,9 @@ function FlashCard({
           {questionNumber} / {totalQuestions}
         </div>
         <p className="text-lg font-medium leading-snug">{question.questionText}</p>
+        <p className="text-xs text-amber-600 mt-3 bg-amber-50 rounded-lg px-3 py-2">
+          ⚠️ Question ancienne — options non disponibles. Réfléchis à ta réponse avant de révéler.
+        </p>
       </div>
 
       {!revealed ? (
@@ -247,31 +256,39 @@ function FlashCard({
           onClick={handleReveal}
           className="w-full py-3 border-2 border-dashed border-primary/30 rounded-xl text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
         >
-          Voir la réponse
+          Révéler la bonne réponse
         </button>
       ) : (
         <>
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-            <p className="text-xs text-green-600 font-medium mb-1">Bonne réponse</p>
-            <p className="text-sm font-semibold text-green-800">{question.correctAnswer}</p>
+            <p className="text-xs text-green-600 font-medium mb-1">Bonne réponse (option {correctText})</p>
+            <p className="text-sm text-green-700">
+              La réponse correcte était l'option <span className="font-bold text-green-800">{correctText}</span>.
+              Les options ne sont plus disponibles pour cette ancienne question.
+            </p>
           </div>
 
           {!answered ? (
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleJudge(false)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
-              >
-                <XCircle className="h-4 w-4" />
-                J'avais faux
-              </button>
-              <button
-                onClick={() => handleJudge(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 border border-green-200 text-green-600 rounded-xl text-sm font-medium hover:bg-green-50 transition-colors"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                J'avais bon
-              </button>
+            <div>
+              <p className="text-sm text-center text-muted-foreground mb-3">
+                Tu te souviens de ta réponse d'origine ?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleJudge(false)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
+                >
+                  <XCircle className="h-4 w-4" />
+                  J'aurais encore faux
+                </button>
+                <button
+                  onClick={() => handleJudge(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 border border-green-200 text-green-600 rounded-xl text-sm font-medium hover:bg-green-50 transition-colors"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Je l'aurais eu
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center">
