@@ -47,9 +47,14 @@ export async function GET(req: NextRequest) {
       const t = a.session.theme;
       if (!grouped[t]) grouped[t] = { theme: t, count: 0, answers: [] };
       grouped[t].count++;
+      let parsedOptions: string[] = [];
+      try { parsedOptions = JSON.parse(a.options); } catch { /* ignore */ }
+
       grouped[t].answers.push({
         id: a.id,
         questionText: a.questionText,
+        options: parsedOptions,
+        type: a.type,
         userAnswer: a.userAnswer,
         correctAnswer: a.correctAnswer,
         date: a.session.date.toISOString(),

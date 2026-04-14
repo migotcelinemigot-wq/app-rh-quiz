@@ -12,6 +12,8 @@ import { CheckCircle2, XCircle, RotateCcw, Home } from "lucide-react";
 interface AnswerRecord {
   notionQuestionId: string;
   questionText: string;
+  options: string[];
+  type: string;
   userAnswer: string;
   correctAnswer: string;
   isCorrect: boolean;
@@ -47,6 +49,8 @@ export default function QuizSession() {
     const record: AnswerRecord = {
       notionQuestionId: q.id,
       questionText: q.question,
+      options: q.options ?? [],
+      type: q.type ?? "QCM",
       userAnswer,
       correctAnswer: q.answer,
       isCorrect,

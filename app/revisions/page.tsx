@@ -17,6 +17,8 @@ import {
 interface WrongAnswer {
   id: number;
   questionText: string;
+  options: string[];
+  type: string;
   userAnswer: string;
   correctAnswer: string;
   date: string;
@@ -53,9 +55,19 @@ export default function Revisions() {
     });
   };
 
-  const retryTheme = (themeKey: string) => {
-    sessionStorage.setItem("quizPresetTheme", themeKey);
-    router.push("/quiz");
+  const retryTheme = (group: ThemeGroup) => {
+    // Passer les questions ratées à la session de révision
+    const questions = group.answers.map((a) => ({
+      id: a.id,
+      questionText: a.questionText,
+      options: a.options,
+      type: a.type,
+      correctAnswer: a.correctAnswer,
+      theme: group.theme,
+    }));
+    sessionStorage.setItem("revisionQuestions", JSON.stringify(questions));
+    sessionStorage.setItem("revisionTheme", group.theme);
+    router.push("/revisions/session");
   };
 
   if (loading) {
@@ -133,12 +145,12 @@ export default function Revisions() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        retryTheme(group.theme);
+                        retryTheme(group);
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                     >
                       <RotateCcw className="h-3 w-3" />
-                      Retenter
+                      Retenter ({group.count})
                     </button>
                     {/* Toggle */}
                     {isOpen ? (
@@ -198,11 +210,11 @@ export default function Revisions() {
                         Génère un quiz sur ce thème pour t'améliorer
                       </span>
                       <button
-                        onClick={() => retryTheme(group.theme)}
+                        onClick={() => retryTheme(group)}
                         className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
-                        Nouveau quiz — {theme?.label ?? group.theme}
+                        Retenter les {group.count} questions
                       </button>
                     </div>
                   </div>

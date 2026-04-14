@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
         answers: {
           notionQuestionId: string;
           questionText: string;
+          options?: string[];
+          type?: string;
           userAnswer: string;
           correctAnswer: string;
           isCorrect: boolean;
@@ -43,7 +45,11 @@ export async function POST(req: NextRequest) {
         correctAnswers,
         durationSec,
         answers: {
-          create: answers,
+          create: answers.map((a) => ({
+            ...a,
+            options: JSON.stringify(a.options ?? []),
+            type: a.type ?? "QCM",
+          })),
         },
       },
       include: { answers: true },

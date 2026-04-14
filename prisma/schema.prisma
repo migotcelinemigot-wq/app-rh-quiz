@@ -23,6 +23,8 @@ model QuizAnswer {
   sessionId        Int
   notionQuestionId String
   questionText     String
+  options          String      @default("[]")   // JSON array des options
+  type             String      @default("QCM")
   userAnswer       String
   correctAnswer    String
   isCorrect        Boolean
