@@ -437,7 +437,8 @@ export async function getQuestionsFromNotion(
   difficulty?: number,
   limit = 50
 ): Promise<NotionQuestion[]> {
-  const filters: Parameters<typeof notion.databases.query>[0]["filter"][] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const filters: any[] = [];
 
   if (theme) {
     const label = THEMES[theme]?.label ?? theme;
@@ -450,12 +451,8 @@ export async function getQuestionsFromNotion(
 
   const response = await notion.databases.query({
     database_id: dbId,
-    filter:
-      filters.length === 0
-        ? undefined
-        : filters.length === 1
-        ? filters[0]
-        : { and: filters },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    filter: (filters.length === 0 ? undefined : filters.length === 1 ? filters[0] : { and: filters }) as any,
     page_size: limit,
     sorts: [{ timestamp: "created_time", direction: "descending" }],
   });
@@ -529,7 +526,8 @@ export async function ensureThemePage(
 
   const page = await notion.pages.create({
     parent: { type: "page_id", page_id: parentPageId },
-    icon: { type: "emoji", emoji: icon as Parameters<typeof notion.pages.create>[0]["icon"] extends { emoji: infer E } ? E : string },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon: { type: "emoji", emoji: icon as any },
     properties: {
       title: [{ text: { content: `${icon} ${themeLabel}` } }],
     },
@@ -539,7 +537,8 @@ export async function ensureThemePage(
         type: "callout",
         callout: {
           rich_text: [{ type: "text", text: { content: `Questions générées sur : ${themeLabel}` } }],
-          icon: { type: "emoji", emoji: icon as string },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          icon: { type: "emoji", emoji: icon as any },
           color: "gray_background",
         },
       },

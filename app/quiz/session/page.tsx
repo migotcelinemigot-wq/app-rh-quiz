@@ -6,6 +6,7 @@ import QuizCard from "@/components/QuizCard";
 import type { NotionQuestion } from "@/lib/notion";
 import { THEMES } from "@/lib/themes";
 import type { ThemeKey } from "@/lib/themes";
+import type { QuestionType } from "@/lib/claude";
 import { CheckCircle2, XCircle, RotateCcw, Home } from "lucide-react";
 
 interface AnswerRecord {
@@ -178,7 +179,7 @@ export default function QuizSession() {
         key={q.id}
         questionNumber={current + 1}
         totalQuestions={questions.length}
-        type={q.type ?? "QCM"}
+        type={(q.type ?? "QCM") as QuestionType}
         question={q.question}
         options={q.options}
         correctAnswer={q.answer}

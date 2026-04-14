@@ -54,6 +54,52 @@ const SUBCATEGORIES: Record<ThemeKey, { label: string; keywords: string[] }[]> =
     { label: "Congés spécifiques", keywords: ["congé supplémentaire", "ancienneté", "congé conventionnel"] },
     { label: "Avantages CC 0086",  keywords: ["avantage spécifique", "publicité", "IDCC 0086"] },
   ],
+  GESTION_PERFORMANCE: [
+    { label: "Entretiens annuels",     keywords: ["entretien annuel", "évaluation", "performance"] },
+    { label: "KPI RH",                 keywords: ["KPI", "indicateur", "tableau de bord"] },
+    { label: "OKR / Objectifs",        keywords: ["OKR", "objectif", "SMART", "feedback"] },
+    { label: "Plans d'amélioration",   keywords: ["plan amélioration", "PIP", "progression"] },
+  ],
+  FORMATION_COMPETENCES: [
+    { label: "Plan de formation",  keywords: ["plan de formation", "formation", "CPF", "OPCO"] },
+    { label: "GPEC",               keywords: ["GPEC", "GEPP", "compétences", "emploi"] },
+    { label: "Upskilling",         keywords: ["upskilling", "reskilling", "montée en compétences"] },
+    { label: "Coaching & mentoring",keywords: ["coaching", "mentoring", "accompagnement"] },
+  ],
+  GESTION_TALENTS: [
+    { label: "Mobilité & carrière", keywords: ["mobilité", "mutation", "promotion", "carrière"] },
+    { label: "Succession planning", keywords: ["succession", "vivier", "talent", "haut potentiel"] },
+  ],
+  ADMIN_RH: [
+    { label: "Dossiers salariés",  keywords: ["dossier", "salarié", "RGPD", "conservation"] },
+    { label: "Reporting RH",       keywords: ["reporting", "tableau de bord", "BDES", "effectif"] },
+    { label: "Mobilité interne",   keywords: ["mobilité interne", "mutation", "affectation"] },
+  ],
+  REMUNERATION: [
+    { label: "Politique salariale", keywords: ["politique salariale", "rémunération", "grille"] },
+    { label: "Équité salariale",    keywords: ["équité", "index", "transparence", "égalité"] },
+    { label: "Stock-options",       keywords: ["stock-option", "BSPCE", "AGA", "actionnariat"] },
+  ],
+  STRATEGIE_RH: [
+    { label: "Transformation digitale", keywords: ["digital", "transformation", "SIRH", "automatisation"] },
+    { label: "Change management",        keywords: ["changement", "conduite", "résistance"] },
+    { label: "Workforce planning",       keywords: ["workforce", "effectif", "planification"] },
+  ],
+  QVT_DIVERSITE: [
+    { label: "Diversité & inclusion", keywords: ["diversité", "inclusion", "discrimination", "égalité"] },
+    { label: "Bien-être / RPS",       keywords: ["bien-être", "RPS", "burnout", "QVT", "QVCT"] },
+    { label: "Handicap",              keywords: ["handicap", "RQTH", "OETH", "AGEFIPH"] },
+  ],
+  SANTE_SECURITE: [
+    { label: "SST & prévention",    keywords: ["sécurité", "accident", "DUERP", "prévention", "risque"] },
+    { label: "Médecine du travail", keywords: ["médecin", "inaptitude", "visite médicale"] },
+    { label: "Ergonomie",           keywords: ["ergonomie", "poste de travail", "TMS"] },
+  ],
+  SIRH_DIGITAL: [
+    { label: "SIRH & logiciels",    keywords: ["SIRH", "logiciel RH", "ATS", "digitalisation"] },
+    { label: "People analytics",    keywords: ["data RH", "analytics", "IA", "intelligence artificielle"] },
+    { label: "Paie digitalisée",    keywords: ["paie digitale", "DSN", "automatisation paie"] },
+  ],
 };
 
 export default function Library() {
