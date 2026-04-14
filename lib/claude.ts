@@ -75,7 +75,8 @@ export async function generateQuestions(
   theme: ThemeKey | "TOUS",
   difficulty: 1 | 2 | 3,
   count: number,
-  subcategory?: string
+  subcategory?: string,
+  forcedType?: string
 ): Promise<GeneratedQuestion[]> {
   const themeLabel = theme === "TOUS"
     ? "tous les thèmes RH (droit du travail, paie, recrutement, relations sociales, délais, avantages, CC 0086, performance, formation, talents, admin RH, rémunération, stratégie RH, QVT, santé-sécurité, SIRH)"
@@ -87,11 +88,18 @@ export async function generateQuestions(
 
   const difficultyLabel = DIFFICULTIES[difficulty].label.toLowerCase();
 
-  // Répartir les types de questions selon la rotation
-  const typeDistribution: QuestionType[] = Array.from(
-    { length: count },
-    (_, i) => TYPE_ROTATION[i % TYPE_ROTATION.length]
-  );
+  // Répartir les types de questions : forcé ou rotation
+  let typeDistribution: QuestionType[];
+  if (forcedType && TYPE_INSTRUCTIONS[forcedType as QuestionType]) {
+    // Type unique imposé par l'utilisateur
+    typeDistribution = Array(count).fill(forcedType as QuestionType);
+  } else {
+    // Rotation normale sur tous les types
+    typeDistribution = Array.from(
+      { length: count },
+      (_, i) => TYPE_ROTATION[i % TYPE_ROTATION.length]
+    );
+  }
 
   const typeSummary = typeDistribution.reduce(
     (acc, t) => { acc[t] = (acc[t] || 0) + 1; return acc; },

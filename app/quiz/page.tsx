@@ -6,17 +6,30 @@ import { THEMES, THEME_KEYS, DIFFICULTIES, THEME_GROUPS, SUBCATEGORIES } from "@
 import type { ThemeKey, ThemeGroup } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Loader2, Sparkles, Tag } from "lucide-react";
+import type { QuestionType } from "@/lib/claude";
 
 const GROUP_ORDER: ThemeGroup[] = ["fondamentaux", "developpement", "administration", "humain", "digital"];
 
+const QUESTION_TYPES: { value: QuestionType | "MELANGE"; label: string; description: string; emoji: string }[] = [
+  { value: "MELANGE",          label: "Mélange",          description: "Tous les types variés",              emoji: "🎲" },
+  { value: "QCM",              label: "QCM",               description: "Choix multiple (A, B, C, D)",        emoji: "🔘" },
+  { value: "VRAI_FAUX",        label: "Vrai / Faux",       description: "Valider une affirmation",            emoji: "✅" },
+  { value: "MISE_EN_SITUATION",label: "Mise en situation", description: "Que faites-vous ?",                  emoji: "💼" },
+  { value: "CLASSEMENT",       label: "Classement",        description: "Ordonner des étapes",                emoji: "🔢" },
+  { value: "PRIORITE",         label: "Priorité",          description: "Quelle est la 1ère action ?",        emoji: "🎯" },
+  { value: "TEXTE_A_TROUS",    label: "Texte à trous",     description: "Compléter une phrase",               emoji: "✏️" },
+  { value: "DEFINITION",       label: "Définition",        description: "Trouver la bonne définition",        emoji: "📖" },
+];
+
 export default function QuizSetup() {
   const router = useRouter();
-  const [theme, setTheme]           = useState<string>("");
-  const [subcategory, setSubcategory] = useState<string>("");
-  const [difficulty, setDifficulty] = useState<number>(2);
-  const [count, setCount]           = useState<number>(5);
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState("");
+  const [theme, setTheme]               = useState<string>("");
+  const [subcategory, setSubcategory]   = useState<string>("");
+  const [difficulty, setDifficulty]     = useState<number>(2);
+  const [count, setCount]               = useState<number>(5);
+  const [questionType, setQuestionType] = useState<QuestionType | "MELANGE">("MELANGE");
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Record<ThemeGroup, boolean>>({
     fondamentaux:  true,
     developpement: false,
@@ -48,6 +61,7 @@ export default function QuizSetup() {
           difficulty,
           count,
           subcategory: subcategory || undefined,
+          questionType: questionType === "MELANGE" ? undefined : questionType,
         }),
       });
 
@@ -274,6 +288,29 @@ export default function QuizSetup() {
             ⏱ La génération de 50 questions peut prendre 30 à 60 secondes — merci de patienter.
           </p>
         )}
+      </div>
+
+      {/* ── TYPE DE QUESTION ── */}
+      <div className="bg-white rounded-xl border border-border p-6 mb-6">
+        <h3 className="font-semibold mb-4">Type de question</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {QUESTION_TYPES.map(({ value, label, description, emoji }) => (
+            <button
+              key={value}
+              onClick={() => setQuestionType(value)}
+              className={cn(
+                "flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 text-center transition-all",
+                questionType === value
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border hover:border-primary/40 hover:bg-accent"
+              )}
+            >
+              <span className="text-xl">{emoji}</span>
+              <span className="text-xs font-semibold leading-tight">{label}</span>
+              <span className="text-xs text-muted-foreground leading-tight">{description}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (

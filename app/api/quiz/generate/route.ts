@@ -10,11 +10,12 @@ export const maxDuration = 120;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { theme, difficulty = 2, count = 5, subcategory } = body as {
+    const { theme, difficulty = 2, count = 5, subcategory, questionType } = body as {
       theme: ThemeKey;
       difficulty: 1 | 2 | 3;
       count: number;
       subcategory?: string;
+      questionType?: string;
     };
 
     if (!theme) {
@@ -22,8 +23,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Générer les questions via Groq (priorité absolue)
-    console.log("[quiz/generate] Generating", count, "questions, theme:", theme, "subcategory:", subcategory);
-    const generated = await generateQuestions(theme, difficulty, count, subcategory);
+    console.log("[quiz/generate] Generating", count, "questions, theme:", theme, "subcategory:", subcategory, "type:", questionType);
+    const generated = await generateQuestions(theme, difficulty, count, subcategory, questionType);
     console.log("[quiz/generate] Generated:", generated.length);
 
     // Préparer les questions avec IDs temporaires pour le quiz
