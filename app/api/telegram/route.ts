@@ -26,11 +26,11 @@ export async function GET(req: Request) {
   const type = searchParams.get("type") ?? "test";
 
   const messages: Record<string, string> = {
-    morning: `☀️ <b>Bonjour Céline !</b>\n\nC'est l'heure de votre quiz RH du jour 🎯\n\nQuelques minutes suffisent pour progresser sur le <b>Code du travail</b> et la <b>CC 0086</b>.\n\n👉 <a href="${APP_URL}">Lancer mon quiz</a>`,
+    morning: `Bonjour Celine ! C'est l'heure de votre quiz RH du jour. Quelques minutes suffisent pour progresser sur le Code du travail et la CC 0086.\n\nLancer mon quiz : ${APP_URL}`,
 
-    evening: `🌙 <b>Rappel du soir</b>\n\nAvez-vous fait votre quiz RH aujourd'hui ? 📚\n\nIl est encore temps de maintenir votre streak !\n\n👉 <a href="${APP_URL}">Faire mon quiz</a>`,
+    evening: `Rappel du soir : avez-vous fait votre quiz RH aujourd'hui ? Il est encore temps de maintenir votre streak !\n\nFaire mon quiz : ${APP_URL}`,
 
-    test: `✅ <b>Bot Quiz RH opérationnel !</b>\n\nVous recevrez :\n• ☀️ Un rappel chaque matin à 8h00\n• 🌙 Un rappel chaque soir à 19h00\n\n👉 <a href="${APP_URL}">Accéder à l'app</a>`,
+    test: `Bot Quiz RH operationnel ! Vous recevrez un rappel chaque matin a 8h00 et chaque soir a 19h00.\n\nAcceder a l'app : ${APP_URL}`,
   };
 
   const text = messages[type] ?? messages.test;
