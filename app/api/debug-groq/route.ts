@@ -16,11 +16,11 @@ export async function GET() {
     apiKeyPrefix: apiKey.slice(0, 8) + "...",
   };
 
-  for (const model of ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]) {
+  for (const model of ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"]) {
     try {
       const completion = await groq.chat.completions.create({
         model,
-        messages: [{ role: "user", content: 'Réponds uniquement: {"ok": true}' }],
+        messages: [{ role: "user", content: 'Réponds uniquement avec du JSON valide: {"ok": true}' }],
         max_tokens: 20,
         response_format: { type: "json_object" },
       });

@@ -120,7 +120,7 @@ export async function generateQuestions(
   // Adapter max_tokens selon le nombre de questions (150 tokens/question en moyenne)
   const dynamicMaxTokens = Math.min(2000 + count * 180, 12000);
 
-  const models = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"];
+  const models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
   const messages: Parameters<typeof groq.chat.completions.create>[0]["messages"] = [
     {
       role: "system",
