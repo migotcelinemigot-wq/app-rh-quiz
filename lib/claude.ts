@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import type { ThemeKey } from "./themes";
-import { THEMES, DIFFICULTIES } from "./themes";
+import { THEMES, DIFFICULTIES, THEME_CONTEXT } from "./themes";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -22,22 +22,7 @@ export interface GeneratedQuestion {
   source: string;
 }
 
-const THEME_CONTEXT: Record<ThemeKey, string> = {
-  DROIT_TRAVAIL:
-    "le droit du travail français : contrats de travail (CDI, CDD, intérim), période d'essai, rupture du contrat, licenciement, démission, congés payés, durée du travail, heures supplémentaires",
-  PAIE:
-    "la paie et la rémunération : calcul du salaire brut/net, cotisations sociales, primes légales et conventionnelles, avantages en nature, bulletin de paie, minimum conventionnel CC 0086",
-  RECRUTEMENT:
-    "le recrutement et la GPEC : processus de recrutement, fiches de poste, entretiens d'embauche, onboarding, gestion prévisionnelle des emplois et compétences, plan de formation",
-  RELATIONS_SOCIALES:
-    "les relations sociales en entreprise : Comité Social et Économique (CSE), délégués syndicaux, négociation collective, accords d'entreprise, procédures disciplinaires, harcèlement",
-  DELAIS:
-    "les délais légaux RH : préavis de licenciement et démission, délais de prescription des actions prud'homales, délais de réponse aux courriers recommandés, délais de convocation",
-  AVANTAGES:
-    "les avantages et bénéfices salariaux : tickets restaurant, mutuelle obligatoire, prévoyance, intéressement, participation, PEE/PERCO, chèques cadeaux (limites CSE), avantages en nature (véhicule, logement, téléphone)",
-  CC_0086:
-    "la convention collective nationale 0086 (Publicité) : champ d'application, classifications et grilles de salaires, avantages spécifiques, congés supplémentaires, clauses particulières du secteur Publicité, IDCC 0086",
-};
+// THEME_CONTEXT importé depuis themes.ts (source unique de vérité pour tous les 16 thèmes)
 
 const TYPE_INSTRUCTIONS: Record<QuestionType, string> = {
   QCM: `Question à choix multiple avec 4 options (A, B, C, D). Une seule bonne réponse. Les distracteurs doivent être plausibles et piégeux — pas de mauvaises réponses évidentes. Mélanger des détails proches (délais légaux voisins, seuils similaires).
@@ -89,10 +74,11 @@ const NUANCE_RULES = `Règles de qualité OBLIGATOIRES :
 export async function generateQuestions(
   theme: ThemeKey | "TOUS",
   difficulty: 1 | 2 | 3,
-  count: number
+  count: number,
+  subcategory?: string
 ): Promise<GeneratedQuestion[]> {
   const themeLabel = theme === "TOUS"
-    ? "tous les thèmes RH (droit du travail, paie, recrutement, relations sociales, délais, avantages, CC 0086)"
+    ? "tous les thèmes RH (droit du travail, paie, recrutement, relations sociales, délais, avantages, CC 0086, performance, formation, talents, admin RH, rémunération, stratégie RH, QVT, santé-sécurité, SIRH)"
     : THEMES[theme].label;
 
   const themeContext = theme === "TOUS"
@@ -118,6 +104,14 @@ export async function generateQuestions(
     )
     .join("\n\n");
 
+  // Focus sur la sous-catégorie si spécifiée
+  const subcategoryInstruction = subcategory
+    ? `\n⚡ FOCUS OBLIGATOIRE : concentre-toi EXCLUSIVEMENT sur la sous-catégorie "${subcategory}". Toutes les questions doivent porter spécifiquement sur ce sujet.`
+    : "";
+
+  // Adapter max_tokens selon le nombre de questions (150 tokens/question en moyenne)
+  const dynamicMaxTokens = Math.min(2000 + count * 180, 12000);
+
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -127,7 +121,7 @@ export async function generateQuestions(
       },
       {
         role: "user",
-        content: `Génère exactement ${count} question(s) de niveau ${difficultyLabel} sur le thème : ${themeLabel}.
+        content: `Génère exactement ${count} question(s) de niveau ${difficultyLabel} sur le thème : ${themeLabel}.${subcategoryInstruction}
 
 Contexte détaillé : ${themeContext}
 
@@ -142,7 +136,7 @@ Réponds avec : {"questions": [ /* exactement ${count} objets */ ]}`,
       },
     ],
     temperature: 0.8,
-    max_tokens: 5000,
+    max_tokens: dynamicMaxTokens,
     response_format: { type: "json_object" },
   });
 

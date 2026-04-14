@@ -5,15 +5,16 @@ import { prisma } from "@/lib/prisma";
 import type { ThemeKey } from "@/lib/themes";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { theme, difficulty = 2, count = 5 } = body as {
+    const { theme, difficulty = 2, count = 5, subcategory } = body as {
       theme: ThemeKey;
       difficulty: 1 | 2 | 3;
       count: number;
+      subcategory?: string;
     };
 
     if (!theme) {
@@ -21,8 +22,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Générer les questions via Groq (priorité absolue)
-    console.log("[quiz/generate] Generating", count, "questions, theme:", theme);
-    const generated = await generateQuestions(theme, difficulty, count);
+    console.log("[quiz/generate] Generating", count, "questions, theme:", theme, "subcategory:", subcategory);
+    const generated = await generateQuestions(theme, difficulty, count, subcategory);
     console.log("[quiz/generate] Generated:", generated.length);
 
     // Préparer les questions avec IDs temporaires pour le quiz
