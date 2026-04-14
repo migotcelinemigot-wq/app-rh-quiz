@@ -66,21 +66,21 @@ async function saveToNotionBackground(
     const questionsToSave = generated.map((q) => ({ ...q, theme: theme as ThemeKey, difficulty }));
 
     // ── 1. Sauvegarder dans la page thème (structure wiki lisible) ──────────
-    const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
-    if (parentPageId) {
-      const themeKey   = theme as string;
-      const themeLabel = theme === "TOUS"
-        ? "Tous les thèmes"
-        : (THEMES[theme as ThemeKey]?.label ?? theme);
+    const themeKey   = theme as string;
+    const themeLabel = theme === "TOUS"
+      ? "Tous les thèmes"
+      : (THEMES[theme as ThemeKey]?.label ?? theme);
+    const cacheKey   = `NOTION_THEME_PAGE_${themeKey}`;
 
-      // Retrouver ou créer la sous-page du thème
-      const cacheKey  = `NOTION_THEME_PAGE_${themeKey}`;
-      let themePageId: string | undefined;
+    // Chercher l'ID dans AppConfig (peuplé par /api/notion/setup)
+    let themePageId: string | undefined;
+    const stored = await prisma.appConfig.findUnique({ where: { key: cacheKey } });
+    themePageId = stored?.value ?? undefined;
 
-      const stored = await prisma.appConfig.findUnique({ where: { key: cacheKey } });
-      themePageId = stored?.value ?? undefined;
-
-      if (!themePageId) {
+    // Si pas en AppConfig, créer la page (nécessite NOTION_PARENT_PAGE_ID)
+    if (!themePageId) {
+      const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
+      if (parentPageId) {
         themePageId = await ensureThemePage(parentPageId, themeKey, themeLabel);
         await prisma.appConfig.upsert({
           where:  { key: cacheKey },
@@ -88,8 +88,12 @@ async function saveToNotionBackground(
           create: { key: cacheKey, value: themePageId },
         });
         console.log("[quiz/generate] Created theme page for:", themeLabel);
+      } else {
+        console.warn("[quiz/generate] Notion theme page not found and NOTION_PARENT_PAGE_ID not set — skipping page save");
       }
+    }
 
+    if (themePageId) {
       await appendQuestionsToThemePage(themePageId, questionsToSave);
       console.log("[quiz/generate] Questions appended to theme page:", themeLabel);
     }
