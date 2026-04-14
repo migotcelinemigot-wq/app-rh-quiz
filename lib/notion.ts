@@ -497,6 +497,214 @@ export async function getQuestionsFromNotion(
     });
 }
 
+// ─── Pages par thème ─────────────────────────────────────────────────────────
+
+const THEME_PAGE_ICONS: Record<string, string> = {
+  DROIT_TRAVAIL:        "⚖️",
+  PAIE:                 "💰",
+  RECRUTEMENT:          "🔍",
+  RELATIONS_SOCIALES:   "🤝",
+  DELAIS:               "⏱️",
+  AVANTAGES:            "🎁",
+  CC_0086:              "📋",
+  GESTION_PERFORMANCE:  "📊",
+  FORMATION_COMPETENCES:"🎓",
+  GESTION_TALENTS:      "⭐",
+  ADMIN_RH:             "🗂️",
+  REMUNERATION:         "💼",
+  STRATEGIE_RH:         "🚀",
+  QVT_DIVERSITE:        "🌈",
+  SANTE_SECURITE:       "🛡️",
+  SIRH_DIGITAL:         "💻",
+  TOUS:                 "🌐",
+};
+
+/** Crée (ou retrouve) la sous-page d'un thème sous Quiz RH CODE */
+export async function ensureThemePage(
+  parentPageId: string,
+  themeKey: string,
+  themeLabel: string
+): Promise<string> {
+  const icon = THEME_PAGE_ICONS[themeKey] ?? "📁";
+
+  const page = await notion.pages.create({
+    parent: { type: "page_id", page_id: parentPageId },
+    icon: { type: "emoji", emoji: icon as Parameters<typeof notion.pages.create>[0]["icon"] extends { emoji: infer E } ? E : string },
+    properties: {
+      title: [{ text: { content: `${icon} ${themeLabel}` } }],
+    },
+    children: [
+      {
+        object: "block",
+        type: "callout",
+        callout: {
+          rich_text: [{ type: "text", text: { content: `Questions générées sur : ${themeLabel}` } }],
+          icon: { type: "emoji", emoji: icon as string },
+          color: "gray_background",
+        },
+      },
+      { object: "block", type: "divider", divider: {} },
+    ],
+  });
+
+  return page.id;
+}
+
+/** Construit les blocs Notion pour une question (format page wiki) */
+function buildQuestionBlocks(q: {
+  type?: string;
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+  source: string;
+}): object[] {
+  const blocks: object[] = [];
+  const qType        = q.type as QuestionType | undefined;
+  const typeLabel    = qType ? TYPE_LABELS[qType] : "Question";
+  const typeEmoji    = qType ? TYPE_EMOJIS[qType] : "❓";
+  const isVraiFaux   = q.type === "VRAI_FAUX";
+  const isClassement = q.type === "CLASSEMENT";
+
+  // Question (heading_3)
+  blocks.push({
+    object: "block",
+    type: "heading_3",
+    heading_3: {
+      rich_text: [{ type: "text", text: { content: `${typeEmoji} ${truncate(q.question, 400)}` } }],
+      color: "default",
+    },
+  });
+
+  // Options
+  if (isVraiFaux) {
+    for (const opt of ["Vrai", "Faux"]) {
+      const isCorrect = opt === q.answer;
+      blocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [{
+            type: "text",
+            text: { content: isCorrect ? `✅ ${opt}` : `${opt}` },
+            annotations: { bold: isCorrect, color: isCorrect ? "green" : "default" },
+          }],
+        },
+      });
+    }
+  } else if (isClassement) {
+    const correctOrder = q.answer.split(",").map((s: string) => s.trim());
+    q.options.forEach((opt: string, i: number) => {
+      const letter = getOptionLetter(opt, i);
+      const rank   = correctOrder.indexOf(letter) + 1;
+      const text   = opt.replace(/^[A-D]\.\s*/, "");
+      blocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [{
+            type: "text",
+            text: { content: `${rank}. ${letter}. ${text}` },
+            annotations: { bold: true },
+          }],
+        },
+      });
+    });
+  } else {
+    q.options.forEach((opt: string, i: number) => {
+      const letter    = getOptionLetter(opt, i);
+      const isCorrect = letter === q.answer;
+      const text      = opt.replace(/^[A-D]\.\s*/, "");
+      blocks.push({
+        object: "block",
+        type: "bulleted_list_item",
+        bulleted_list_item: {
+          rich_text: [{
+            type: "text",
+            text: { content: isCorrect ? `✅ ${letter}. ${text}` : `${letter}. ${text}` },
+            annotations: { bold: isCorrect, color: isCorrect ? "green" : "default" },
+          }],
+        },
+      });
+    });
+  }
+
+  // Explication
+  const expl = parseExplanation(q.explanation);
+  if (expl.isStructured) {
+    if (expl.definition) {
+      blocks.push({
+        object: "block", type: "callout",
+        callout: {
+          rich_text: [{ type: "text", text: { content: truncate(expl.definition) } }],
+          icon: { type: "emoji", emoji: "📌" },
+          color: "blue_background",
+        },
+      });
+    }
+    if (expl.exemple) {
+      blocks.push({
+        object: "block", type: "callout",
+        callout: {
+          rich_text: [{ type: "text", text: { content: truncate(expl.exemple) } }],
+          icon: { type: "emoji", emoji: "💡" },
+          color: "green_background",
+        },
+      });
+    }
+    if (expl.contreExemple) {
+      blocks.push({
+        object: "block", type: "callout",
+        callout: {
+          rich_text: [{ type: "text", text: { content: truncate(expl.contreExemple) } }],
+          icon: { type: "emoji", emoji: "⚠️" },
+          color: "orange_background",
+        },
+      });
+    }
+  } else if (q.explanation) {
+    blocks.push({
+      object: "block", type: "paragraph",
+      paragraph: {
+        rich_text: [{ type: "text", text: { content: truncate(q.explanation) } }],
+      },
+    });
+  }
+
+  // Source
+  if (q.source) {
+    blocks.push({
+      object: "block", type: "quote",
+      quote: {
+        rich_text: [{ type: "text", text: { content: `📎 ${truncate(q.source, 400)}` }, annotations: { color: "gray" } }],
+      },
+    });
+  }
+
+  // Séparateur
+  blocks.push({ object: "block", type: "divider", divider: {} });
+
+  return blocks;
+}
+
+/** Ajoute des questions à la fin d'une page thème (par lots de 90 blocs) */
+export async function appendQuestionsToThemePage(
+  pageId: string,
+  questions: (Omit<NotionQuestion, "id" | "createdAt"> & { type?: string })[]
+): Promise<void> {
+  // Construire tous les blocs
+  const allBlocks = questions.flatMap((q) => buildQuestionBlocks(q));
+
+  // Envoyer par lots de 90 (limite Notion = 100)
+  for (let i = 0; i < allBlocks.length; i += 90) {
+    const batch = allBlocks.slice(i, i + 90);
+    await notion.blocks.children.append({
+      block_id: pageId,
+      children: batch as Parameters<typeof notion.blocks.children.append>[0]["children"],
+    });
+  }
+}
+
 // ─── Créer une fiche de révision dans Notion ─────────────────────────────────
 
 export async function createRevisionSheet(
