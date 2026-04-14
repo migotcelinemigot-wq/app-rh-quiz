@@ -120,16 +120,15 @@ export async function generateQuestions(
   // Adapter max_tokens selon le nombre de questions (150 tokens/question en moyenne)
   const dynamicMaxTokens = Math.min(2000 + count * 180, 12000);
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [
-      {
-        role: "system",
-        content: `Tu es un expert juriste et formateur RH spécialisé en droit du travail français et CC 0086 (Publicité). Tu génères des questions de formation professionnelle exigeantes en JSON. Réponds UNIQUEMENT avec un objet JSON valide de la forme {"questions": [...]}.`,
-      },
-      {
-        role: "user",
-        content: `Génère exactement ${count} question(s) de niveau ${difficultyLabel} sur le thème : ${themeLabel}.${subcategoryInstruction}
+  const models = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"];
+  const messages: Parameters<typeof groq.chat.completions.create>[0]["messages"] = [
+    {
+      role: "system",
+      content: `Tu es un expert juriste et formateur RH spécialisé en droit du travail français et CC 0086 (Publicité). Tu génères des questions de formation professionnelle exigeantes en JSON. Réponds UNIQUEMENT avec un objet JSON valide de la forme {"questions": [...]}.`,
+    },
+    {
+      role: "user",
+      content: `Génère exactement ${count} question(s) de niveau ${difficultyLabel} sur le thème : ${themeLabel}.${subcategoryInstruction}
 
 Contexte détaillé : ${themeContext}
 
@@ -141,19 +140,36 @@ ${typeInstructions}
 ${EXPLANATION_FORMAT}
 
 Réponds avec : {"questions": [ /* exactement ${count} objets */ ]}`,
-      },
-    ],
-    temperature: 0.8,
-    max_tokens: dynamicMaxTokens,
-    response_format: { type: "json_object" },
-  });
+    },
+  ];
 
-  const text = completion.choices[0]?.message?.content?.trim() ?? "";
-  const parsed = JSON.parse(text);
-  const questions: GeneratedQuestion[] = parsed.questions ?? parsed;
-  if (!Array.isArray(questions)) throw new Error("Format JSON invalide");
+  let lastError: unknown;
+  for (const model of models) {
+    try {
+      console.log("[claude] Trying model:", model);
+      const completion = await groq.chat.completions.create({
+        model,
+        messages,
+        temperature: 0.8,
+        max_tokens: dynamicMaxTokens,
+        response_format: { type: "json_object" },
+      });
 
-  return questions.slice(0, count);
+      const text = completion.choices[0]?.message?.content?.trim() ?? "";
+      const parsed = JSON.parse(text);
+      const questions: GeneratedQuestion[] = parsed.questions ?? parsed;
+      if (!Array.isArray(questions)) throw new Error("Format JSON invalide");
+      console.log("[claude] Success with model:", model);
+      return questions.slice(0, count);
+    } catch (err) {
+      console.warn("[claude] Model failed:", model, err instanceof Error ? err.message : err);
+      lastError = err;
+      // Petite pause avant de tenter le modèle suivant
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  throw lastError;
 }
 
 export async function generateOptimisationTips(

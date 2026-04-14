@@ -86,7 +86,7 @@ export default function QuizSetup() {
       else sessionStorage.removeItem("quizSubcategory");
       router.push("/quiz/session");
     } catch {
-      setError("Impossible de générer les questions. Vérifiez vos clés API.");
+      setError("Impossible de générer les questions. Réessaie dans quelques secondes (le service IA est peut-être temporairement surchargé).");
       setLoading(false);
     }
   };
