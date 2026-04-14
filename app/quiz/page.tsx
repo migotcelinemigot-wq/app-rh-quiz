@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { THEMES, THEME_KEYS, DIFFICULTIES, THEME_GROUPS, SUBCATEGORIES } from "@/lib/themes";
 import type { ThemeKey, ThemeGroup } from "@/lib/themes";
@@ -37,6 +37,18 @@ export default function QuizSetup() {
     humain:        false,
     digital:       false,
   });
+
+  // Lire le thème pré-sélectionné depuis la page révisions
+  useEffect(() => {
+    const preset = sessionStorage.getItem("quizPresetTheme");
+    if (preset) {
+      setTheme(preset);
+      sessionStorage.removeItem("quizPresetTheme");
+      // Ouvrir le groupe correspondant
+      const group = THEMES[preset as ThemeKey]?.group as ThemeGroup | undefined;
+      if (group) setExpandedGroups(prev => ({ ...prev, [group]: true }));
+    }
+  }, []);
 
   const handleThemeSelect = (key: string) => {
     setTheme(key);

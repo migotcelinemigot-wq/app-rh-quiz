@@ -1,119 +1,217 @@
-import { prisma } from "@/lib/prisma";
-import { THEMES, THEME_KEYS } from "@/lib/themes";
-import RevisionTrigger from "./RevisionTrigger";
+"use client";
 
-async function getWeakThemes() {
-  const scores = await prisma.competencyScore.findMany();
-  const scoreMap = new Map(scores.map((s) => [s.theme, s]));
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { THEMES } from "@/lib/themes";
+import type { ThemeKey } from "@/lib/themes";
+import {
+  XCircle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  BookOpen,
+  Loader2,
+} from "lucide-react";
 
-  return THEME_KEYS.map((key) => {
-    const s = scoreMap.get(key);
-    return {
-      theme: key,
-      label: THEMES[key].label,
-      color: THEMES[key].color,
-      score: s?.score ?? 0,
-      totalAnswers: s?.totalAnswers ?? 0,
-      needsRevision: (s?.score ?? 0) < 70 && (s?.totalAnswers ?? 0) > 0,
-    };
-  });
+interface WrongAnswer {
+  id: number;
+  questionText: string;
+  userAnswer: string;
+  correctAnswer: string;
+  date: string;
 }
 
-export default async function Revisions() {
-  const themes = await getWeakThemes();
-  const weakThemes = themes.filter((t) => t.needsRevision);
-  const untested = themes.filter((t) => t.totalAnswers === 0);
+interface ThemeGroup {
+  theme: string;
+  count: number;
+  answers: WrongAnswer[];
+}
+
+export default function Revisions() {
+  const router = useRouter();
+  const [groups, setGroups] = useState<ThemeGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/revisions/wrong-answers")
+      .then((r) => r.json())
+      .then((data) => {
+        setGroups(data.grouped ?? []);
+        setTotal(data.total ?? 0);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggleExpand = (theme: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(theme) ? next.delete(theme) : next.add(theme);
+      return next;
+    });
+  };
+
+  const retryTheme = (themeKey: string) => {
+    sessionStorage.setItem("quizPresetTheme", themeKey);
+    router.push("/quiz");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl">
+      {/* En-tête */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold">Fiches de révision</h2>
+        <h2 className="text-2xl font-bold">Révisions</h2>
         <p className="text-muted-foreground mt-1">
-          Générées automatiquement pour les thèmes avec score &lt; 70%
+          {total > 0
+            ? `${total} question${total > 1 ? "s" : ""} à retravailler, groupées par thème`
+            : "Aucune question à réviser pour l'instant"}
         </p>
       </div>
 
-      {/* Thèmes à réviser */}
-      {weakThemes.length > 0 ? (
-        <div className="mb-6">
-          <h3 className="font-semibold mb-3 text-red-600">
-            À réviser ({weakThemes.length})
-          </h3>
-          <div className="space-y-3">
-            {weakThemes.map((t) => (
+      {groups.length === 0 ? (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+          <CheckCircle2 className="h-10 w-10 text-green-500 mx-auto mb-3" />
+          <p className="font-semibold text-green-700 text-lg">Aucune erreur à réviser !</p>
+          <p className="text-sm text-green-600 mt-1">
+            Lance un quiz pour commencer à t'entraîner.
+          </p>
+          <button
+            onClick={() => router.push("/quiz")}
+            className="mt-4 px-5 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Lancer un quiz
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {groups.map((group) => {
+            const themeKey = group.theme as ThemeKey;
+            const theme = THEMES[themeKey];
+            const isOpen = expanded.has(group.theme);
+
+            return (
               <div
-                key={t.theme}
-                className="bg-white rounded-xl border border-red-200 p-5"
+                key={group.theme}
+                className="bg-white rounded-xl border border-border overflow-hidden"
               >
-                <div className="flex items-center justify-between">
+                {/* En-tête du thème */}
+                <div
+                  className="flex items-center justify-between p-5 cursor-pointer hover:bg-accent/30 transition-colors"
+                  onClick={() => toggleExpand(group.theme)}
+                >
                   <div className="flex items-center gap-3">
                     <div
-                      className="h-4 w-4 rounded-full"
-                      style={{ backgroundColor: t.color }}
+                      className="h-4 w-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: theme?.color ?? "#6366f1" }}
                     />
                     <div>
-                      <p className="font-medium">{t.label}</p>
+                      <p className="font-semibold">
+                        {theme?.label ?? group.theme}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Score : {Math.round(t.score)}% — {t.totalAnswers} questions
+                        {group.count} question{group.count > 1 ? "s" : ""} ratée{group.count > 1 ? "s" : ""}
                       </p>
                     </div>
                   </div>
-                  <RevisionTrigger theme={t.theme} label={t.label} />
+
+                  <div className="flex items-center gap-3">
+                    {/* Badge count */}
+                    <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-100 text-red-600 text-xs font-bold">
+                      {group.count}
+                    </span>
+                    {/* Bouton retenter */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        retryTheme(group.theme);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Retenter
+                    </button>
+                    {/* Toggle */}
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
+
+                {/* Liste des questions ratées */}
+                {isOpen && (
+                  <div className="border-t border-border divide-y divide-border">
+                    {group.answers.map((a, i) => (
+                      <div key={a.id} className="p-4">
+                        {/* Numéro + question */}
+                        <div className="flex gap-3 mb-3">
+                          <span className="flex-shrink-0 h-5 w-5 rounded-full bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center mt-0.5">
+                            {i + 1}
+                          </span>
+                          <p className="text-sm font-medium leading-snug">
+                            {a.questionText}
+                          </p>
+                        </div>
+
+                        {/* Réponses */}
+                        <div className="ml-8 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            <span className="text-sm text-red-600">
+                              Ta réponse :{" "}
+                              <span className="font-medium">{a.userAnswer}</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            <span className="text-sm text-green-600">
+                              Bonne réponse :{" "}
+                              <span className="font-medium">{a.correctAnswer}</span>
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(a.date).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Pied du groupe : bouton centré */}
+                    <div className="p-4 bg-gray-50 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Génère un quiz sur ce thème pour t'améliorer
+                      </span>
+                      <button
+                        onClick={() => retryTheme(group.theme)}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Nouveau quiz — {theme?.label ?? group.theme}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6 text-center">
-          <p className="font-semibold text-green-700">
-            {themes.filter((t) => t.totalAnswers > 0).length > 0
-              ? "Excellent ! Tous vos thèmes sont au-dessus de 70%"
-              : "Aucune donnée pour l'instant"}
-          </p>
-          <p className="text-sm text-green-600 mt-1">
-            Continuez à vous entraîner pour maintenir ce niveau.
-          </p>
+            );
+          })}
         </div>
       )}
-
-      {/* Scores de tous les thèmes */}
-      <div className="bg-white rounded-xl border border-border p-6">
-        <h3 className="font-semibold mb-4">État de tous les thèmes</h3>
-        <div className="space-y-3">
-          {themes.map((t) => (
-            <div key={t.theme}>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium">{t.label}</span>
-                <span className="text-sm text-muted-foreground">
-                  {t.totalAnswers === 0 ? (
-                    <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">Non testé</span>
-                  ) : (
-                    <>{Math.round(t.score)}%</>
-                  )}
-                </span>
-              </div>
-              {t.totalAnswers > 0 && (
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${t.score}%`,
-                      backgroundColor: t.score < 70 ? "#ef4444" : t.color,
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {untested.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-4">
-            {untested.length} thème{untested.length > 1 ? "s" : ""} non encore testés.
-          </p>
-        )}
-      </div>
     </div>
   );
 }
