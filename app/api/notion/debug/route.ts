@@ -15,10 +15,11 @@ export async function GET() {
 
   // 1. Variables d'environnement
   result.env = {
-    NOTION_API_KEY:         process.env.NOTION_API_KEY ? "✅ SET" : "❌ MISSING",
+    GROQ_API_KEY:           process.env.GROQ_API_KEY           ? "✅ SET" : "❌ MISSING",
+    NOTION_API_KEY:         process.env.NOTION_API_KEY         ? "✅ SET" : "❌ MISSING",
     NOTION_QUESTIONS_DB_ID: process.env.NOTION_QUESTIONS_DB_ID ? `✅ ${process.env.NOTION_QUESTIONS_DB_ID}` : "❌ NOT SET",
     NOTION_PARENT_PAGE_ID:  process.env.NOTION_PARENT_PAGE_ID  ? `✅ ${process.env.NOTION_PARENT_PAGE_ID}`  : "❌ NOT SET",
-    DATABASE_URL:           process.env.DATABASE_URL ? "✅ SET" : "❌ MISSING",
+    DATABASE_URL:           process.env.DATABASE_URL           ? "✅ SET" : "❌ MISSING",
   };
 
   // 2. AppConfig — toutes les clés Notion
