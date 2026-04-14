@@ -12,6 +12,7 @@ import {
   RotateCcw,
   BookOpen,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 interface WrongAnswer {
@@ -36,6 +37,7 @@ export default function Revisions() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [total, setTotal] = useState(0);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetch("/api/revisions/wrong-answers")
@@ -53,6 +55,15 @@ export default function Revisions() {
       next.has(theme) ? next.delete(theme) : next.add(theme);
       return next;
     });
+  };
+
+  const handleReset = async () => {
+    if (!confirm(`Supprimer toutes les ${total} questions à réviser ? Cette action est irréversible.`)) return;
+    setResetting(true);
+    await fetch("/api/revisions/reset", { method: "DELETE" });
+    setGroups([]);
+    setTotal(0);
+    setResetting(false);
   };
 
   const retryTheme = (group: ThemeGroup) => {
@@ -81,13 +92,25 @@ export default function Revisions() {
   return (
     <div className="max-w-3xl">
       {/* En-tête */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold">Révisions</h2>
-        <p className="text-muted-foreground mt-1">
-          {total > 0
-            ? `${total} question${total > 1 ? "s" : ""} à retravailler, groupées par thème`
-            : "Aucune question à réviser pour l'instant"}
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Révisions</h2>
+          <p className="text-muted-foreground mt-1">
+            {total > 0
+              ? `${total} question${total > 1 ? "s" : ""} à retravailler, groupées par thème`
+              : "Aucune question à réviser pour l'instant"}
+          </p>
+        </div>
+        {total > 0 && (
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {resetting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+            Tout effacer
+          </button>
+        )}
       </div>
 
       {groups.length === 0 ? (
