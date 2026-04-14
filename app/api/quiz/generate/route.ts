@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { generateQuestions } from "@/lib/claude";
 import {
   appendQuestionsToThemePage,
@@ -41,9 +42,11 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     }));
 
-    // 2. Sauvegarder dans Notion en arrière-plan (non bloquant)
-    saveToNotionBackground(generated, theme as string, difficulty).catch((err) =>
-      console.error("[quiz/generate] Notion save failed (non-blocking):", err)
+    // 2. Sauvegarder dans Notion en arrière-plan (waitUntil garde la fonction en vie sur Vercel)
+    waitUntil(
+      saveToNotionBackground(generated, theme as string, difficulty).catch((err) =>
+        console.error("[quiz/generate] Notion save failed:", err)
+      )
     );
 
     return NextResponse.json({ questions: questionsWithTempIds, count: questionsWithTempIds.length });
