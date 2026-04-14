@@ -79,7 +79,7 @@ export async function generateQuestions(
     messages: [
       {
         role: "system",
-        content: `Expert droit du travail français et CC 0086 (Publicité). Génère des questions RH. JSON uniquement, sans texte avant ou après.`,
+        content: `Tu es un expert en droit du travail français et CC 0086 (Publicité). Tu génères des questions RH en JSON. Réponds UNIQUEMENT avec un objet JSON valide de la forme {"questions": [...]}.`,
       },
       {
         role: "user",
@@ -92,18 +92,17 @@ ${typeInstructions}
 
 Règles : questions variées, explications courtes (1-2 phrases), citer articles loi/CC 0086.
 
-Tableau JSON de ${count} objets uniquement.`,
+Réponds avec : {"questions": [ /* ${count} objets */ ]}`,
       },
     ],
-    temperature: 0.8,
+    temperature: 0.7,
     max_tokens: 4000,
+    response_format: { type: "json_object" },
   });
 
   const text = completion.choices[0]?.message?.content?.trim() ?? "";
-  const match = text.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error("Format JSON invalide");
-
-  const questions: GeneratedQuestion[] = JSON.parse(match[0]);
+  const parsed = JSON.parse(text);
+  const questions: GeneratedQuestion[] = parsed.questions ?? parsed;
   if (!Array.isArray(questions)) throw new Error("Format JSON invalide");
 
   return questions.slice(0, count);
